@@ -1,7 +1,6 @@
 {
     "name": "D2X APF",
     "description": "D2X Organization APF workflow.",
-    "iconName": "example-icon",
     "categories": [
         "Rust"
     ]
