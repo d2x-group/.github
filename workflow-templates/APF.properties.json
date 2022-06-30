@@ -1,0 +1,8 @@
+{
+    "name": "D2X Organization Workflow",
+    "description": "D2X Organization APF workflow.",
+    "iconName": "example-icon",
+    "categories": [
+        "Rust"
+    ]
+}
