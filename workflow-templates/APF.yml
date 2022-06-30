@@ -1,0 +1,51 @@
+name: APF - Amazing Pipeline Framework
+
+on:
+  push:
+    branches: 
+    - "**"
+
+
+
+jobs:
+  test:
+    uses: ./workflows-reusables/test-and-format.yml
+    with:
+      language: #Fill in your language here
+      threshhold: "100" #code coverage threshhold
+
+  # build-and-push:
+  #   needs: test
+  #   uses: ./.github/workflows/build-and-push.yml
+  #   with:
+  #     ecr-repository: # Fill in the ecr-repo name
+  #     image-tag: #Fill in the image tag
+  #     NODE_ENV: #Fill in if building javascript project
+  #     working-directory: "."
+  #   secrets:
+  #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+
+  # test-in-test-env:
+  #   needs: build-and-push
+  #   uses: ./.github/workflows/test-in-test.yml
+  #   with:
+  #     deployment:  #file name without .yaml and deployment name
+  #     helm: true #True for helm false for yaml
+  #     namespace: default # Fill in the namespace
+  #     destory: true
+  #   secrets:
+  #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+  # test-in-staging-env:
+  #   needs: test-in-test-env
+  #   uses: ./.github/workflows/test-in-staging.yml
+  #   with:
+  #     deployment: #file name without .yaml and deployment name
+  #     namespace: default # Fill in the namespace
+  #     destory: true
+  #   secrets:
+  #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

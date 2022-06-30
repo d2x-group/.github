@@ -1,0 +1,124 @@
+name: Reusable SARA test & fmt
+
+on:
+  workflow_call:
+    secrets:
+      ssh-private-key:
+        required: false
+
+    inputs:
+      language: 
+        required: true
+        type: string
+      threshhold: 
+        required: true
+        type: string
+
+jobs:
+  test-rust:
+    if: ${{inputs.language == 'rust'}}
+    runs-on: ubuntu-latest
+    container: ubuntu
+    name: Run tests and checks format
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get -y install git build-essential pkg-config curl libssl-dev openssh-server cmake sudo 
+        # These apt-get install packages could be an input variable
+        env:
+          DEBIAN_FRONTEND: noninteractive
+      
+      # - name: SSH-Agent
+      #   uses: webfactory/ssh-agent@v0.5.3
+      #   with:
+      #     ssh-private-key: ${{ secrets.ssh-private-key }}
+      
+      - name: Install latest stable
+        uses: actions-rs/toolchain@v1
+        with:
+            toolchain: stable
+            override: true
+            components: cargo, rustfmt, clippy
+
+      - name: cache rust stable
+        uses: Swatinem/rust-cache@v1
+
+      - name: clippy
+        uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --all-features
+
+      - name: Run tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --verbose 
+
+  codecov-rust:
+    if: ${{inputs.language == 'rust'}}
+    runs-on: ubuntu-latest
+    container: ubuntu
+    name: CodeCoverage
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get -y install git build-essential pkg-config curl libssl-dev openssh-server cmake sudo 
+
+      - name: Install nightly for codecov 
+        uses: actions-rs/toolchain@v1
+        with:
+            toolchain: nightly
+            override: true
+
+      - name: cache rust nightly
+        uses: Swatinem/rust-cache@v1
+        with:
+          key: "nightly"
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all-features --no-fail-fast
+        env:
+          CARGO_INCREMENTAL: '0'
+          RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
+          RUSTDOCFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
+  
+      - id: coverage
+        uses: actions-rs/grcov@v0.1
+
+      - name: Coveralls upload
+        id: coveralls
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: ${{ steps.coverage.outputs.report }}
+
+      - name: Set coverall threshhold
+        uses: fjogeleit/http-request-action@v1
+        with:
+          url: 'http://coveralls.io/api/repos/github/d2x-group/${{ github.event.repository.name }}'
+          method: 'PUT'
+          customHeaders: '{"Authorization": "token 66oxTmpPIrFtF40h117r4Lip5xoz9SO5eX3d4", "Content-Type": "application/json"}' # Token is Robbe PAT #
+          data: '{"repo": {"commit_status_fail_threshold": ${{inputs.threshhold}}}}'
+          
+      # - name: print status
+      #   env:
+      #     result_url: ${{ steps.coveralls.outputs.coveralls-api-result }}
+      #     github_token: ${{ secrets.GITHUB_TOKEN }}
+      #   shell: bash
+      #   run: |
+      #     result_url_edit=${result_url##*/}
+      #     echo $result_url_edit
+      #     result=${result_url_edit::-2}
+      #     echo $result
+      #     wget https://coveralls.io/jobs/$result.json --header="Authorization: Bearer $github_token" 
